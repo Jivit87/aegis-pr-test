@@ -1,42 +1,4 @@
-#!/usr/bin/env python3
-"""
-Vulnerable Flask application with SQL injection
-"""
-
-import sqlite3
-from flask import Flask, request
-
-app = Flask(__name__)
-
-@app.route('/user')
-def get_user():
-    """VULNERABLE: SQL Injection"""
-    user_id = request.args.get('id', '')
-    
-    # VULNERABILITY: Direct string concatenation in SQL query
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL Injection here!
-    cursor.execute(query)
-    result = cursor.fetchone()
-    conn.close()
-    
-    return {"user": result}
-
-@app.route('/search')
-def search():
-    """VULNERABLE: SQL Injection in LIKE clause"""
-    term = request.args.get('q', '')
-    
-    # VULNERABILITY: Unsanitized input in LIKE clause
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE name LIKE '%" + term + "%'"  # SQL Injection!
-    cursor.execute(query)
-    results = cursor.fetchall()
-    conn.close()
-    
-    return {"results": results}
-
-if __name__ == '__main__':
-    app.run(debug=True)
+{
+  "patched_code": "import sqlite3\nfrom flask import Flask, request\n\napp = Flask(__name__)\n\n@app.route('/user')\ndef get_user():\n    user_id = request.args.get('id', '')\n    \n    conn = sqlite3.connect('users.db')\n    cursor = conn.cursor()\n    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))\n    result = cursor.fetchone()\n    conn.close()\n    \n    return {\"user\": result}\n\n@app.route('/search')\ndef search():\n    term = request.args.get('q', '')\n    \n    conn = sqlite3.connect('users.db')\n    cursor = conn.cursor()\n    cursor.execute('SELECT * FROM users WHERE name LIKE ?', ('%' + term + '%',))\n    results = cursor.fetchall()\n    conn.close()\n    \n    return {\"results\": results}\n\nif __name__ == '__main__':\n    app.run(debug=True)",
+  "test_code": "import sys\nsys.path.insert(0, '/app')\nfrom app import app\nimport pytest\n\n@pytest.fixture\ndef client():\n    app.config['TESTING'] = True\n    with app.test_client() as client:\n        yield client\n\ndef test_get_user(client):\n    response = client.get('/user?id=1')\n    assert response.status_code == 200\n\ndef test_search(client):\n    response = client.get('/search?q=test')\n    assert response.status_code == 200\n\ndef test_sql_injection_user(client):\n    response = client.get('/user?id=1 OR 1=1')\n    assert response.status_code == 200\n    assert response.json['user'] is None\n\ndef test_sql_injection_search(client):\n    response = client.get('/search?q=%\' OR \'1\'=\'1')\n    assert response.status_code == 200\n    assert len(response.json['results']) == 0"
+}
