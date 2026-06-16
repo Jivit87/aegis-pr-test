@@ -16,8 +16,8 @@ def get_user():
     # VULNERABILITY: Direct string concatenation in SQL query
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL Injection here!
-    cursor.execute(query)
+    query = "SELECT * FROM users WHERE id = ?"
+    cursor.execute(query, (user_id,))
     result = cursor.fetchone()
     conn.close()
     
@@ -31,8 +31,8 @@ def search():
     # VULNERABILITY: Unsanitized input in LIKE clause
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE name LIKE '%" + term + "%'"  # SQL Injection!
-    cursor.execute(query)
+    query = "SELECT * FROM users WHERE name LIKE ?"
+    cursor.execute(query, (f'%{term}%',))
     results = cursor.fetchall()
     conn.close()
     
