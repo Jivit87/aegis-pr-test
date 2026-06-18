@@ -13,11 +13,9 @@ def get_user():
     """VULNERABLE: SQL Injection"""
     user_id = request.args.get('id', '')
     
-    # VULNERABILITY: Direct string concatenation in SQL query
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL Injection here!
-    cursor.execute(query)
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     result = cursor.fetchone()
     conn.close()
     
@@ -28,11 +26,9 @@ def search():
     """VULNERABLE: SQL Injection in LIKE clause"""
     term = request.args.get('q', '')
     
-    # VULNERABILITY: Unsanitized input in LIKE clause
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE name LIKE '%" + term + "%'"  # SQL Injection!
-    cursor.execute(query)
+    cursor.execute("SELECT * FROM users WHERE name LIKE ?", (f"%{term}%",))
     results = cursor.fetchall()
     conn.close()
     
